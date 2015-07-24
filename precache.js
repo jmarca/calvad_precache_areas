@@ -1,125 +1,126 @@
 /**
- * this is a library to cache all the known combinations of areas and times
- * I guess maybe it can also invalidate existing data
+ * this is a program to cache or replace all the known combinations of
+ * areas and times
  **/
 
+var argv = require('minimist')(process.argv.slice(2))
+var path = require('path')
+var glob = require('glob')
+// configuration stuff
+var rootdir = path.normalize(__dirname)
+
+// where are the files
+
+var config_file
+if(argv.config === undefined){
+    config_file = path.normalize(rootdir+'/../config.json')
+}else{
+    config_file = path.normalize(rootdir+'/'+argv.config)
+}
+console.log('setting configuration file to ',config_file,'.  Change with the --config option.')
+
+
+var config_okay = require('config_okay')
+
+
+var queue = require('queue-async')
+var num_CPUs = require('os').cpus().length;
+// num_CPUs -= 1 // leave slack for couchdb to work
+num_CPUs = 1  // debugging
+
 var forker = require('./lib/forker.js')
-var get_data = require('./lib/get_data.js')
+
 
 var fs = require('fs');
-var http = require('http');
 var _ = require('lodash');
-var async = require('async');
-var superagent = require('superagent')
 
 var areatypes = require('calvad_areas')
 
-//var time_aggregation=['monthly','weekly','daily','hourly'];
-var  time_aggregation=['hourly'];
+// always hourly, so don't bother
+var  hourly='hourly';
 
 
-var file_combinations = [];
 
-// iterate over combinations, if the file exists, move on, if
-// it does not, ask for it
-var get_options = {
-    host: 'localhost',
-    port:  80
-};
+function precache(config){
 
-var url = 'http://'+ get_options.host+":"+get_options.port
+    var root = process.cwd();
 
-function call_server(cb){
-    console.log(new Date());
-    async.eachLimit(file_combinations,1
-              ,function(file,done) {
-                   console.log('next file is '+file);
-                   var path = '/'+file
-                   console.log(url+path)
-                   superagent.get(url + path)
-                   .end(function(e,r){
-                       if(e){
-                           console.log(e)
-                           return done(e)
-                       }
-                       console.log(new Date());
-                       return done()
-                   })
-                   return null
-               }
-              ,cb);
-    return null
-}
+    if(argv.root !== undefined){
+        root = argv.root
+    }else{
+        if(config.root !== undefined){
+            root = config.root
+        }
+    }
+    if(!path.isAbsolute(root)){
+        path.normalize(rootdir+'/'+root)
+    }
+    console.log('setting root cache path to '+root)
 
-// build a callback function to pass to fs.stat call, below
-function load_files(opts){
+    var subdir
+    if(argv.subdir !== undefined){
+        subdir = argv.subdir
+    }else{
+        if(config.subdir !== undefined){
+            subdir = config.subdir
+        }
+    }
+    if(!path.isAbsolute(subdir)){
+        path.normalize(rootdir+'/'+subdir)
+    }
+    if(subdir === undefined) throw new Error('need subdir.  set in config file, or with the --subdir command line option')
+    console.log('setting subdir to '+subdir)
 
-    var subdir = opts.subdir
-    var root = opts.root
-    var years = opts.years
-    function stat_callback(path,cb){
-        return function(err,stats){
-            if(err){
-                console.log(' pushing '+path);
-                file_combinations.push(path);
-            }else{
-                //console.log('have it');
-            }
-            return cb()
+    var year
+    if(argv.year !== undefined){
+        year = argv.year
+    }else{
+        if(config.year !== undefined){
+            year = config.year
         }
     }
 
-
-
-    function checkfs (cb){
-        // populate the file combinations array
-        var biglist = []
-        _.each(years,function(year){
-            _.each( areatypes , function(files,area){
-                _.each( files, function(file){
-                    _.each(time_aggregation,function(agg){
-
-                        // do it in this order so as to keep data in
-                        // cache on psql between queries
-                        // this path is for the caching server
-                        var path = [subdir,area,agg,year,file].join('/');
-                        // this path is for the filesystem
-                        var existspath = [root,path].join('/');
-                        biglist.push({'path':path
-                                     ,'existspath':existspath})
-                    })
-                })
-            })
-        });
-
-        async.eachLimit(biglist,2
-                  ,function(obj,cb2){
-                       fs.stat(obj.existspath,stat_callback(obj.path,cb2));
-                   }
-                  ,cb);
+    if(!year){
+        console.log('pass year in using the --year argument')
         return null
     }
-    return checkfs
-}
 
-exports.precache = function precache(options){
+    var cachedir = path.resolve(root+'/'+subdir)
+    console.log(cachedir)
 
-    get_options.host = options.host ? options.host : get_options.host
-    get_options.port = options.port ? options.port : get_options.port
-    url = 'http://'+ get_options.host+":"+get_options.port
+    var filere = /(.*).json/;
+    var biglist = []
+    _.each( areatypes , function(files,area){
+        _.each( files, function(file){
+            // do it in this order so as to keep data in
+            // cache on psql between queries
+            // this path is for the caching server
+            var path = [cachedir,area,hourly,year,file].join('/');
+            var res = filere.exec(file)
 
-    var root =  options.root || process.cwd();
-    var subdir = options.subdir;
-    var years = options.years || [2007,2008,2009]
-    if(subdir === undefined) throw new Error('need subdir defined in options')
-    return function(cb){
-        async.series([load_files({'root':root,'subdir':subdir,'years':years})
-                     ,call_server]
-                    ,function(e){
-                         if(e){
-                             console.log('died with an error')
-                         }
-                         return cb(e)
-                     })
-    }
+            biglist.push({
+                path:path
+                ,areatype:area
+                ,areaname:res[1]
+            })
+        })
+    })
+
+    var q = queue(num_CPUs)
+    // debugging
+    biglist = [biglist[0]]
+    // biglist = biglist.slice(0,5)
+
+    biglist.forEach(function(opts){
+        q.defer(forker,
+                __dirname + '/lib/call_get_data.js'
+                ,config
+                ,opts.areatype
+                ,opts.areaname
+                ,year)
+    })
+    q.await(function(e,r){
+        if(e) console.log('died')
+        return null
+    })
 }
