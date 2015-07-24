@@ -5,7 +5,7 @@
 
 var argv = require('minimist')(process.argv.slice(2))
 var path = require('path')
-var glob = require('glob')
+
 // configuration stuff
 var rootdir = path.normalize(__dirname)
 
@@ -13,7 +13,7 @@ var rootdir = path.normalize(__dirname)
 
 var config_file
 if(argv.config === undefined){
-    config_file = path.normalize(rootdir+'/../config.json')
+    config_file = path.normalize(rootdir+'/config.json')
 }else{
     config_file = path.normalize(rootdir+'/'+argv.config)
 }
@@ -65,10 +65,10 @@ function precache(config){
             subdir = config.subdir
         }
     }
+    if(subdir === undefined) throw new Error('need subdir.  set in config file, or with the --subdir command line option')
     if(!path.isAbsolute(subdir)){
         path.normalize(rootdir+'/'+subdir)
     }
-    if(subdir === undefined) throw new Error('need subdir.  set in config file, or with the --subdir command line option')
     console.log('setting subdir to '+subdir)
 
     var year
@@ -90,21 +90,26 @@ function precache(config){
 
     var filere = /(.*).json/;
     var biglist = []
-    _.each( areatypes , function(files,area){
-        _.each( files, function(file){
-            // do it in this order so as to keep data in
-            // cache on psql between queries
-            // this path is for the caching server
-            var path = [cachedir,area,hourly,year,file].join('/');
-            var res = filere.exec(file)
-
-            biglist.push({
-                path:path
-                ,areatype:area
-                ,areaname:res[1]
-            })
+    //    _.each( areatypes , function(files,area){
+    var area = 'counties'
+    _.each( areatypes[area], function(file){
+        // do it in this order so as to keep data in
+        // cache on psql between queries
+        // this path is for the caching server
+        var path = [cachedir,area,hourly,year,file].join('/');
+        var res = filere.exec(file)
+        if(!res){
+            console.log(file)
+            console.log(filere)
+            throw new Error('regex fails again')
+        }
+        biglist.push({
+            path:path
+            ,areatype:area
+            ,areaname:res[1]
         })
     })
+
 
     var q = queue(num_CPUs)
     // debugging
@@ -124,3 +129,10 @@ function precache(config){
         return null
     })
 }
+
+var mainQ = queue()
+mainQ.defer(config_okay,config_file)
+mainQ.await(function(e,config){
+    precache(config)
+    return null
+})
