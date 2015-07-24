@@ -1,0 +1,19 @@
+{
+  "name": "calvad_precache_areas",
+  "version": "1.0.0",
+  "description": "Code to precache CalVAD area hourlies",
+  "main": "precache.js",
+  "scripts": {
+    "test": "mocha"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jmarca/calvad_precache_areas.git"
+  },
+  "author": "James E. Marca",
+  "license": "GPL-2.0",
+  "bugs": {
+    "url": "https://github.com/jmarca/calvad_precache_areas/issues"
+  },
+  "homepage": "https://github.com/jmarca/calvad_precache_areas#readme"
+}
