@@ -2,3 +2,4 @@
 /config.json
 *~
 .tern-port
+**/node_modules/

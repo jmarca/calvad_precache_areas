@@ -15,5 +15,16 @@
   "bugs": {
     "url": "https://github.com/jmarca/calvad_precache_areas/issues"
   },
-  "homepage": "https://github.com/jmarca/calvad_precache_areas#readme"
+  "homepage": "https://github.com/jmarca/calvad_precache_areas#readme",
+  "dependencies": {
+    "accumulate_features": "jmarca/accumulate_features",
+    "calvad_couch_cacher": "jmarca/calvad_couch_cacher",
+    "calvad_reducer": "jmarca/calvad_reducer",
+    "detector_postgis_query": "jmarca/detector_postgis_query",
+    "geom_utils": "jmarca/geom_utils",
+    "lodash": "^3.10.0",
+    "makedir": "0.0.11",
+    "pg": "^4.4.0",
+    "queue-async": "^1.0.7"
+  }
 }
