@@ -25,8 +25,8 @@ var config_okay = require('config_okay')
 
 var queue = require('queue-async')
 var num_CPUs = require('os').cpus().length;
-// num_CPUs -= 1 // leave slack for couchdb to work
-num_CPUs = 1  // debugging
+num_CPUs = 4 // leave slack for couchdb to work
+// num_CPUs = 1  // debugging
 
 var forker = require('./lib/forker.js')
 
@@ -87,6 +87,7 @@ function precache(config){
 
     var cachedir = path.resolve(root+'/'+subdir)
     console.log(cachedir)
+    config.cacheroot = cachedir
 
     var filere = /(.*).json/;
     var biglist = []
@@ -113,8 +114,9 @@ function precache(config){
 
     var q = queue(num_CPUs)
     // debugging
-    biglist = [biglist[0]]
+    // test with 5 at once
     // biglist = biglist.slice(0,5)
+
 
     biglist.forEach(function(opts){
         q.defer(forker,
