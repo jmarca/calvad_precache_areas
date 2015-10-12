@@ -92,7 +92,8 @@ function precache(config){
     var filere = /(.*).json/;
     var biglist = []
     //    _.each( areatypes , function(files,area){
-    var area = 'counties'
+    //var area = 'counties'
+    var area = 'grid'
     _.each( areatypes[area], function(file){
         // do it in this order so as to keep data in
         // cache on psql between queries
