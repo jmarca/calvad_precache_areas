@@ -36,7 +36,7 @@ var forker = require('./lib/forker.js')
 
 
 var fs = require('fs');
-var _ = require('lodash');
+
 
 var areatypes = require('calvad_areas')
 
@@ -108,7 +108,10 @@ function precache(config){
 
     var filere = /(.*).json/;
     var biglist = []
-    _.each( areatypes[area], function(file){
+    //    _.each( areatypes , function(files,area){
+    //var area = 'counties'
+    var fs_q = queue(2)
+    areatypes[area].forEach(  function(file){
         // do it in this order so as to keep data in
         // cache on psql between queries
         // this path is for the caching server
@@ -119,33 +122,46 @@ function precache(config){
             console.log(filere)
             throw new Error('regex fails again')
         }
-        biglist.push({
-            path:path
-            ,areatype:area
-            ,areaname:res[1]
+        fs_q.defer(function(cb){
+            fs.stat(path,function(e,stats){
+                if(e){
+                    // good, no precached file, so process this one
+                    biglist.push({
+                        path:path
+                        ,areatype:area
+                        ,areaname:res[1]
+                    })
+                }
+                return cb()
+            })
+            return null
         })
     })
+    fs_q.await(function(e,r){
+        if(e) throw new Error(e)
+        var q = queue(num_CPUs)
+        // debugging
+        // test with 5 at once
+        // biglist = biglist.slice(0,5)
 
 
-    var q = queue(num_CPUs)
-    // debugging
-    // test with 5 at once
-    // biglist = biglist.slice(0,5)
-
-
-    biglist.forEach(function(opts){
-        q.defer(forker,
-                __dirname + '/lib/call_get_data.js'
-                ,config
-                ,opts.areatype
-                ,opts.areaname
-                ,year)
-    })
-    q.await(function(e,r){
-        if(e) console.log('died')
+        biglist.forEach(function(opts){
+            q.defer(forker,
+                    __dirname + '/lib/call_get_data.js'
+                    ,config
+                    ,opts.areatype
+                    ,opts.areaname
+                    ,year)
+        })
+        q.await(function(e,r){
+            if(e) console.log('died')
+            return null
+        })
         return null
     })
+    return null
 }
+
 
 var mainQ = queue()
 mainQ.defer(config_okay,config_file)
