@@ -32,7 +32,7 @@ var forker = require('./lib/forker.js')
 
 
 var fs = require('fs');
-var _ = require('lodash');
+
 
 var areatypes = require('calvad_areas')
 
@@ -94,44 +94,62 @@ function precache(config){
     //    _.each( areatypes , function(files,area){
     //var area = 'counties'
     var area = 'grid'
-    _.each( areatypes[area], function(file){
+    //console.log(areatypes[area])
+    //croak()
+    var limited = areatypes[area].slice(0,100)
+    var fs_q = queue(2)
+    areatypes[area].forEach(  function(file){
         // do it in this order so as to keep data in
         // cache on psql between queries
         // this path is for the caching server
         var path = [cachedir,area,hourly,year,file].join('/');
+        //console.log(path)
         var res = filere.exec(file)
         if(!res){
             console.log(file)
             console.log(filere)
             throw new Error('regex fails again')
         }
-        biglist.push({
-            path:path
-            ,areatype:area
-            ,areaname:res[1]
+        fs_q.defer(function(cb){
+            fs.stat(path,function(e,stats){
+                if(e){
+                    // good, no precached file, so process this one
+                    biglist.push({
+                        path:path
+                        ,areatype:area
+                        ,areaname:res[1]
+                    })
+                }
+                return cb()
+            })
+            return null
         })
     })
+    fs_q.await(function(e,r){
+        if(e) throw new Error(e)
+        var q = queue(num_CPUs)
+        // debugging
+        // test with 5 at once
+        // biglist = biglist.slice(0,5)
 
 
-    var q = queue(num_CPUs)
-    // debugging
-    // test with 5 at once
-    // biglist = biglist.slice(0,5)
-
-
-    biglist.forEach(function(opts){
-        q.defer(forker,
-                __dirname + '/lib/call_get_data.js'
-                ,config
-                ,opts.areatype
-                ,opts.areaname
-                ,year)
-    })
-    q.await(function(e,r){
-        if(e) console.log('died')
+        biglist.forEach(function(opts){
+            q.defer(forker,
+                    __dirname + '/lib/call_get_data.js'
+                    ,config
+                    ,opts.areatype
+                    ,opts.areaname
+                    ,year)
+        })
+        q.await(function(e,r){
+            if(e) console.log('died')
+            return null
+        })
         return null
     })
+    return null
 }
+
 
 var mainQ = queue()
 mainQ.defer(config_okay,config_file)
