@@ -25,7 +25,7 @@ var config_okay = require('config_okay')
 
 var queue = require('queue-async')
 var num_CPUs = require('os').cpus().length;
-num_CPUs = 4 // leave slack for couchdb to work
+num_CPUs-- // leave slack for couchdb to work
 // num_CPUs = 1  // debugging
 
 var forker = require('./lib/forker.js')
