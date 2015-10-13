@@ -25,7 +25,7 @@ var config_okay = require('config_okay')
 
 var queue = require('d3-queue').queue
 var num_CPUs = require('os').cpus().length;
-// num_CPUs = 4 // leave slack for couchdb to work
+num_CPUs-- // leave slack for couchdb to work
 // num_CPUs = 1  // debugging
 if(argv.jobs !== undefined){
     num_CPUs = argv.jobs
