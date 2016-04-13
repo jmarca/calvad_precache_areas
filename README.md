@@ -17,3 +17,17 @@ Not to mention, I hope things will be easier to understand in a few
 years when I revisit this.
 
 More as I work things out.
+
+# Usage
+
+To use this, you simply run it.  But right now it is failing so I need
+to write tests.
+
+When those tests are done, you should set up config.json and then do:
+
+```
+node ./precache.js
+```
+
+`precache.js` pretty much reads its options from the config.json file.
+But read the source code to make sure.
