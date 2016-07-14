@@ -27,6 +27,10 @@ var queue = require('d3-queue').queue
 var num_CPUs = require('os').cpus().length;
 // num_CPUs = 4 // leave slack for couchdb to work
 // num_CPUs = 1  // debugging
+if(argv.jobs !== undefined){
+    num_CPUs = argv.jobs
+}
+
 
 var forker = require('./lib/forker.js')
 
@@ -85,15 +89,25 @@ function precache(config){
         return null
     }
 
+    var area
+    if(argv.area !== undefined){
+        area = argv.area
+    }else{
+        if(config.area !== undefined){
+            area = config.area
+        }
+    }
+    if( areatypes[area] === undefined ){
+        console.log('pass in a valid area using the --area argument, one of ',Object.keys(areatypes))
+        return null
+    }
+
     var cachedir = path.resolve(root+'/'+subdir)
     console.log(cachedir)
     config.cacheroot = cachedir
 
     var filere = /(.*).json/;
     var biglist = []
-    //    _.each( areatypes , function(files,area){
-    //var area = 'counties'
-    var area = 'grid'
     _.each( areatypes[area], function(file){
         // do it in this order so as to keep data in
         // cache on psql between queries
