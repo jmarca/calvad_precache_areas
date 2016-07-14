@@ -23,7 +23,7 @@
     "calvad_reducer": "jmarca/calvad_reducer",
     "config_okay": "0.0.3",
     "d3-queue": "^2.0.3",
-    "detector_postgis_query": "jmarca/detector_postgis_query",
+    "detector_postgis_query": "github:jmarca/detector_postgis_query",
     "geom_utils": "jmarca/geom_utils",
     "lodash": "^3.10.0",
     "makedir": "0.0.11",
