@@ -116,6 +116,7 @@ function precache(config){
         // cache on psql between queries
         // this path is for the caching server
         var path = [cachedir,area,hourly,year,file].join('/');
+        //console.log(path)
         var res = filere.exec(file)
         if(!res){
             console.log(file)
