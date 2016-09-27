@@ -53,7 +53,7 @@ function precache(config){
         }
     }
     if(!path.isAbsolute(root)){
-        path.normalize(rootdir+'/'+root)
+        root = path.normalize(rootdir+'/'+root)
     }
     console.log('setting root cache path to '+root)
 
@@ -66,9 +66,7 @@ function precache(config){
         }
     }
     if(subdir === undefined) throw new Error('need subdir.  set in config file, or with the --subdir command line option')
-    if(!path.isAbsolute(subdir)){
-        path.normalize(rootdir+'/'+subdir)
-    }
+
     console.log('setting subdir to '+subdir)
 
     var year
@@ -85,14 +83,19 @@ function precache(config){
         return null
     }
 
-    var cachedir = path.resolve(root+'/'+subdir)
-    console.log(cachedir)
+    var cachedir
+    if(!path.isAbsolute(subdir)){
+        cachedir = root+'/'+subdir
+    }else{
+        cachedir = subdir
+    }
+    console.log('cachedir is ultimately:',cachedir)
     config.cacheroot = cachedir
 
     var filere = /(.*).json/;
     var biglist = []
     //    _.each( areatypes , function(files,area){
-    //var area = 'counties'
+    // var area = 'counties'
     var area = 'grid'
     _.each( areatypes[area], function(file){
         // do it in this order so as to keep data in
@@ -128,7 +131,11 @@ function precache(config){
                 ,year)
     })
     q.await(function(e,r){
-        if(e) console.log('died')
+
+        if(e){
+            console.log(e)
+            console.log('died')
+        }
         return null
     })
 }
